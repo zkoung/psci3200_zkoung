@@ -1,0 +1,686 @@
+---
+title: "PSCI 3200 Final Project Research Design"
+format:
+  html:
+    self-contained: TRUE 
+    toc: TRUE
+institute: "University of Pennsylvania" 
+author: "Zach Koung"
+editor: source
+---
+
+### Task 1:
+
+*Describe your research question and provide some background on why you find it interesting or important. Be sure to incorporate the feedback provided on the first assignment. Include references to at least two pieces of existing research that illustrate what has already been discovered about the relationship you are investigating. This could be articles published in academic journals, policy reports and white papers, articles published by think tanks and other credible organizations (ex. Brookings, the United Nations High Commissioner for Refugees, etc.), or pieces of data journalism. A full-credit response will probably be around 150-200 words. (40%)*
+
+------------------------------------------------------------------------
+
+**Description of research question, background, and why its a personal interest:**
+
+The research question explores the impact of LGBTQ+ rights and inclusion on a country's tourism industry. This inquiry is motivated by observations and claims that countries with more inclusive LGBTQ+ rights may attract more tourists, thus benefiting economically. The relevance of this question extends beyond economic considerations, touching on global development issues and the social progress embodied in the UN's Sustainable Development Goals, particularly SDG 10 on reducing inequalities. Recent legislative changes, such as those in Uganda, and their potential economic repercussions highlight the urgency of understanding this dynamic. The study aims to quantitatively measure the relationship between LGBTQ+ rights—using indices like the Spartacus Gay Travel Guide—and tourism metrics, offering insights into how inclusivity influences economic outcomes.
+
+On a more personal level, as an LGBTQ person, when thinking about programs available to me as a student at Penn, such as Penn Global Seminars, study abroad programs, and Global Research and Internship Programs, I have had to consider the countries I would be able to safely live and work in. Having spent a lot of time at the intersection of LGBTQ+ policy and business I often hear about the business impact and I feel this is one way in which I could contribute to broader findings, as I have not found any explicit research connected to the relationship between tourism and LGBTQ+ friendliness.
+
+**Potential sources that cover this topic:**
+
+**Title:** LGBT tourist decision-making and behaviours. A study of Millennial Italian tourists ([link](https://www.emerald.com/insight/content/doi/10.1108/IJSSP-05-2022-0112/full/html))\
+**Author:** Salvatore Monaco\
+**Journal:** International Journal of Sociology and Social Policy\
+**Date:** 11 August 2022
+
+The study investigates how Italian LGBT Millennials make travel decisions, emphasizing the influence of 'push' and 'pull' factors on their destination choices. Utilizing an online survey distributed through social networks and LGBTQ+ community platforms, it provides insights into the preferences and motivations behind their travel behaviors. This research is relevant as it proves there are specific needs and considerations of LGBT tourists, offering a perspective on how inclusive policies and societal attitudes might impact tourism choices.
+
+**Title**: The Relationship Between LGBT Inclusion and Economic Development: Emerging Economies ([link](https://williamsinstitute.law.ucla.edu/publications/lgbt-inclusion-economic-dev/))\
+**Authors**: M.V. Lee Badgett, Sheila Nezhad, Kees Waaldijk, Yana van der Meulen Rodgers\
+**Institution**: Williams Institute at UCLA\
+**Date**: November 2014
+
+This comprehensive study explores the correlation between the social inclusion of LGBT individuals and economic development across 39 countries. The research employs both micro and macro-level analyses to examine the impact of LGBT inclusion on a country's economic performance. Findings indicate a positive relationship between the degree of legal rights granted to LGBT individuals and economic indicators such as GDP per capita. The study provides empirical evidence supporting the notion that greater LGBT inclusion is associated with stronger economic outcomes, emphasizing the importance of anti-discrimination laws and their direct economic relevance. This research contributes significantly to understanding the economic implications of LGBT rights and inclusion on a global scale. While not specifically related to tourism, this research could serve as a model to follow/base my research off of.
+
+------------------------------------------------------------------------
+
+### Task 2:
+
+*State at least one testable hypothesis. Distill your research question into a statement about a specific relationship you expect to see in the world. In most cases, this hypothesis will describe a causal relationship between two variables (i.e. changes in x cause changes in y). Make an argument for why you expect to see this relationship. This should be based on related findings from existing research and/or your own theoretical/logical reasoning. A full-credit response will probably be around 150-200 words. (25%)*
+
+------------------------------------------------------------------------
+
+**Possible hypothesis**
+
+Decreases in LGBTQ friendliness variables that hinder tourism in a given country will result in a decrease in tourism volume to the country, as measured by number of arrivals.
+
+**Why?**
+
+As I have discussed in Checkpoint 1 and above, there is often lots of activists that claim that it is actually costly to countries that are anti-lgbtq because they lose money from tourism and more. As the research iI cited in task 1, the Badgett et al. piece clearly demonstrates how LGBTQ friendliness has an effect on the economy. Secondly, in the first piece of research (as well as a few other older studies show) we know that LGBTQ people consider such factors when traveling, with some research saying LGBTQ friendliness has stronger effects than recent terrorism in the country. Anyway, theoretically less people in the LGBTQ communities should be likely to travel to a place after it has regressed on LGBTQ friendliness. The vise versa should also be true. As countries become more supportive of LGBTQ communities I would expect that more lgbtq people would be willing to travel there and thereby effect tourism volume.
+
+**Please feel free to skip these next few code segements and just use the table of contents to skip to the top of Task3!**
+
+```{r}
+#| output: false
+library(tidyverse)
+
+tour_dat_import <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/API_ST/API_ST.INT.ARVL_DS2_en_csv_v2_84029.csv", 
+                     #row 4 is headers
+                     skip = 3)
+
+##clean up data 
+#no data between 1960 and 94 
+yrs_to_drop <- as.character(1960:2011)
+
+tour_dat <- tour_dat_import %>%
+  select(-yrs_to_drop) %>% 
+  ##these years are mostly empty and I am going to not use post-covid data cause the metrics for LGBT measures changed slighty from 2020 onward 
+  select(-"2020") %>% 
+  select(-"2021") %>% 
+  select(-"2022") %>% 
+  select(-"2023") %>% 
+  select(-"...69") %>% 
+  select(-"Country Code") %>% 
+  select(-"Indicator Code") %>% 
+  select(-"Indicator Name")
+
+##import gay travel
+gay_2012 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2012.csv", 
+                     skip = 1) %>% 
+  #dropping to only country rows
+  slice(1:145) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(!is.na(Total)) %>% 
+  filter(Total != "Total")
+
+gay_2012_cleaned <- gay_2012 %>%
+  rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country)) %>% 
+  mutate(Year = 2012) %>% 
+  rename('Anitdiscrimination' = `Anti-discrimina- tion legislation`) %>% 
+  mutate(across(-c(Country), as.numeric))
+
+colnames(gay_2012_cleaned)
+
+gay_2013 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2013.csv", 
+                     skip = 1) %>% 
+  #dropping to only country rows
+  slice(1:145) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(!is.na(Total)) %>% 
+  filter(Total != "Total")
+
+gay_2013_cleaned <- gay_2013 %>%
+  rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country))  %>% 
+  mutate(Year = 2013) %>% 
+  rename('Anitdiscrimination' = `Anti-discrimina- tion legislation`) %>% 
+  mutate(across(-c(Country), as.numeric))
+
+colnames(gay_2013_cleaned)
+
+
+gay_2014 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2014.csv", 
+                     skip = 1) %>% 
+  rename("Country" = "...2") %>% 
+  #dropping to only country rows
+  #slice(1:145) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(Total != "Total")
+
+gay_2014_cleaned <- gay_2014 %>%
+  #rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country))  %>% 
+  mutate(Year = 2014) %>% 
+  rename('Anitdiscrimination' = `Anti-discrimina- tion legislation`) %>% 
+  mutate(across(-c(Country), as.numeric))
+
+colnames(gay_2014_cleaned)
+
+
+gay_2015 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2015.csv", 
+                     skip = 1) %>% 
+  #rename("Country" = "...2") %>% 
+  #dropping to only country rows
+  slice(1:210) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(Total != "Total")
+
+gay_2015_cleaned <- gay_2015 %>%
+  #rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country)) %>% 
+  mutate(Year = 2015) %>% 
+  rename('Marriage / Partnership' = `Marriage /
+Civil Partnership`, 
+         "Religious influence" = `Religious Influence`, 
+         "Anti-gay laws" = `Anti-Gay Laws`, 
+         "HIV-travel restrictions" = `HIV Travel Restrictions`,
+         "Anitdiscrimination" = `Antidiscrimination legislation`) %>% 
+  mutate(across(-c(Country), as.numeric))
+
+colnames(gay_2015_cleaned)
+
+
+gay_2016 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2016.csv", 
+                     skip = 1) %>% 
+  #rename("Country" = "...2") %>% 
+  #dropping to only country rows
+  slice(1:204) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(Total != "Total")
+
+gay_2016_cleaned <- gay_2016 %>%
+  #rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country))  %>% 
+  mutate(Year = 2016) %>% 
+  rename('Marriage / Partnership' = `Marriage /
+Civil Partnership`, 
+"Religious influence" = `Religious Influence`, 
+"Anitdiscrimination" = `Antidiscrimination legislation`, 
+"Anti-gay laws" = `Anti-Gay Laws`, 
+         "HIV-travel restrictions" = `HIV Travel Restrictions`) %>% 
+    mutate(across(-c(Country), as.numeric))
+
+
+colnames(gay_2016_cleaned)
+
+
+gay_2017 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2017.csv", 
+                     skip = 1) %>% 
+  #rename("Country" = "...2") %>% 
+  #dropping to only country rows
+  slice(1:207) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(Total != "Total")
+
+gay_2017_cleaned <- gay_2017 %>%
+  #rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country))  %>% 
+  mutate(Year = 2017) %>% 
+  rename('Marriage / Partnership' = `Marriage /
+Civil Partnership`, 
+"Religious influence" = `Religious Influence`, 
+"Anitdiscrimination" = `Antidiscrimination legislation`, 
+"Anti-gay laws" = `Anti-Gay Laws`, 
+         "HIV-travel restrictions" = `HIV Travel Restrictions`) %>% 
+    mutate(across(-c(Country), as.numeric))
+
+
+colnames(gay_2017_cleaned)
+
+gay_2018 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2018.csv", 
+                     skip = 186) %>% 
+  #rename("Country" = "...2") %>% 
+  #dropping to only country rows
+  #slice(1:230) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(Total != "Total")
+
+gay_2018_cleaned <- gay_2018 %>%
+  #rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country))  %>% 
+  mutate(Year = 2018) %>% 
+  rename('Marriage / Partnership' = `Mariage /`, 
+         "Equal Age of Consent" = `Equal Age of`, 
+         "Homosexuality illegal" = Homosexuality, 
+         "Religious influence" = Religious, 
+         "Anti-gay laws" = `Anti-Gay Laws`, 
+         "HIV-travel restrictions" = `HIV Travel`) %>% 
+    mutate(across(-c(Country), as.numeric))
+
+colnames(gay_2018_cleaned)
+
+
+gay_2019 <- read_csv("/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gaytravelindex_2019.csv") %>% 
+  #rename("Country" = "...2") %>% 
+  #dropping to only country rows
+  #slice(1:230) %>% 
+  #dropping empty cols 
+  select(-matches("^\\.\\.\\.[0-9]+$")) %>% 
+  ##since its was converted from a pdf, at the top of each page it says total, so I need to drop those out going to use the total col as a measure, if it is NA or "Total" indicates its headers
+  filter(Total != "Total")
+
+gay_2019_cleaned <- gay_2019 %>%
+  #rename('Country' = 'Gay Travel Index') %>% 
+  mutate(Country = str_replace(Country, "[0-9]+$", "")) %>% 
+  mutate(Country = toupper(Country)) %>% 
+  mutate(Year = 2019) %>% 
+  rename('Marriage / Partnership' = `Mariage /`, 
+         "Equal Age of Consent" = `Equal Age of`, 
+         "Homosexuality illegal" = Homosexuality, 
+         "Religious influence" = Religious, 
+         "Anti-gay laws" = `Anti-Gay Laws`, 
+         "HIV-travel restrictions" = `HIV Travel`) %>% 
+    mutate(across(-c(Country), as.numeric))
+
+colnames(gay_2019_cleaned)
+```
+
+```{r}
+#| output: false
+## now lets work on binding the dataframes  
+
+all_yrs_gay <- bind_rows(gay_2012_cleaned,
+                         gay_2013_cleaned, 
+                         gay_2014_cleaned, 
+                         gay_2015_cleaned, 
+                         gay_2016_cleaned, 
+                         gay_2017_cleaned, 
+                         gay_2018_cleaned, 
+                         gay_2019_cleaned)
+
+dim(all_yrs_gay)
+
+write.csv(all_yrs_gay, "/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /all_yrs_gay.csv", row.names = FALSE)
+```
+
+```{r}
+library(readr)
+library(stats) 
+
+all_yrs_gay_pca <- all_yrs_gay %>% 
+  select(-c(Total, Country, Year, `Trans Gender Rights`)) %>% 
+  na.omit()
+
+# Step 3: Perform PCA
+pca_result <- prcomp(all_yrs_gay_pca, scale. = TRUE)
+
+# Print summary of PCA results
+summary(pca_result)
+
+# Optional: Plot PCA
+plot(pca_result$x[,1:2], pch = 19, xlab = "PC1", ylab = "PC2") + 
+title("PCA Plot")
+
+# Scree Plot
+plot(pca_result$sdev^2 / sum(pca_result$sdev^2), 
+     xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     type = 'b', 
+     pch = 19, 
+     main = "Scree Plot")
+
+# Adding a cumulative sum line to the scree plot
+cumulative_variance <- cumsum(pca_result$sdev^2 / sum(pca_result$sdev^2))
+lines(cumulative_variance, col = "blue", type = 'b', pch = 18)
+legend("topright", legend = c("Variance", "Cumulative Variance"), col = c("black", "blue"), pch = c(19, 18), lty = 1)
+
+```
+
+Looks like the cut off is 3
+
+```{r}
+#| output: false
+scores <- pca_result$x[, 1:3]
+head(scores, 18)
+
+loadings <- pca_result$rotation[, 1:3]
+print(loadings)
+```
+
+lets try a corr matrix
+
+```{r}
+cor_matrix <- cor(all_yrs_gay_pca, use = "pairwise.complete.obs")
+
+# Install and load necessary packages
+if (!requireNamespace("igraph", quietly = TRUE)) install.packages("igraph")
+if (!requireNamespace("ggraph", quietly = TRUE)) install.packages("ggraph")
+library(igraph)
+library(ggraph)
+
+graph <- graph_from_adjacency_matrix(cor_matrix, weighted = TRUE, mode = "undirected", diag = FALSE)
+threshold <- 0.5  # Example threshold
+graph <- delete_edges(graph, E(graph)[abs(E(graph)$weight) < threshold])
+
+# Create the network plot
+ggraph(graph, layout = 'fr') + 
+  geom_edge_link(aes(edge_alpha = abs(weight), edge_width = abs(weight)), edge_color = "grey") +
+  geom_node_point(color = "darkblue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_graph() +
+  ggtitle("Variable Correlation Network")
+```
+
+There is a ton of NA's in the data set and before deciding what do to on that front, let me see what countries we have tourist data for. We can cut out countries that dont exist in that data set.
+
+```{r}
+#| output: false
+#lets look for mergining 
+tour_dat_cleaned <- tour_dat %>% 
+  mutate(Country = toupper(`Country Name`)) %>% 
+  select(-`Country Name`)
+
+
+#lets now check by NA's 
+tour_dat_cleaned$NA_count = rowSums(is.na(tour_dat_cleaned[, -which(names(tour_dat_cleaned) == "Country")]))
+
+tour_dat_NA_count = tour_dat_cleaned[, c("Country", "NA_count")] %>% arrange(desc(NA_count))
+print(tour_dat_NA_count)
+
+## we know for certain we can drop countries that have 7 or 8 NA's because we cant make any over year effect 
+tour_dat_cleaned <- tour_dat_cleaned %>% 
+  filter(NA_count < 7) 
+
+dim(tour_dat_cleaned)
+
+write.csv(tour_dat_cleaned, "/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /tour_dat_cleaned.csv", 
+          row.names = FALSE)
+```
+
+Lets hold off on any more removing for now and work on pivoting the gay data wider so its at the country level
+
+```{r}
+#| output: false
+all_yrs_gay_wide <- all_yrs_gay %>% 
+  pivot_longer(cols = -c(Country, Year), names_to = "Variable", values_to = "Value") %>%
+  unite("Variable_Year", Variable, Year, sep = "_") %>%
+  pivot_wider(names_from = "Variable_Year", values_from = "Value") %>% 
+  mutate(across(-Country, ~as.numeric(as.character(.))))
+  
+
+write.csv(all_yrs_gay_wide, "/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /all_yrs_gay_wide.csv", 
+          row.names = FALSE)
+
+dim(all_yrs_gay_wide)
+```
+
+Now we have the super fun task of merging the data frames when the country names are very different! Using GPT 4 to help assist on making easy name/spelling matches
+
+```{r}
+#| output: false
+tour_dat_new_country_names <- tour_dat_cleaned %>% 
+  mutate(Country = case_when(
+    Country == "ANTIGUA AND BARBUDA" ~ "ANTIGUA & BARBUDA",
+    Country == "BAHAMAS, THE" ~ "BAHAMAS",
+    Country == "BOSNIA AND HERZEGOVINA" ~ "BOSNIA-HERZEGOVINA",
+    Country == "BRUNEI DARUSSALAM" ~ "BRUNEI",
+    Country == "CONGO, DEM. REP." ~ "DEM. REP. OF CONGO",
+    Country == "CONGO, REP." ~ "REP. OF THE CONGO",
+    Country == "COTE D'IVOIRE" ~ "IVORY COAST",
+    Country == "CZECHIA" ~ "CZECH REPUBLIC",
+    Country == "EGYPT, ARAB REP." ~ "EGYPT",
+    Country == "ESWATINI" ~ "SWAZILAND",
+    Country == "IRAN, ISLAMIC REP." ~ "IRAN",
+    Country == "KOREA, REP." ~ "KOREA SOUTH",
+    Country == "KYRGYZ REPUBLIC" ~ "KYRGYZSTAN",
+    Country == "LAO PDR" ~ "LAOS",
+    Country == "NORTH MACEDONIA" ~ "MACEDONIA",
+    Country == "RUSSIAN FEDERATION" ~ "RUSSIA",
+    Country == "SLOVAK REPUBLIC" ~ "SLOVAKIA",
+    Country == "SYRIAN ARAB REPUBLIC" ~ "SYRIA",
+    Country == "TURKIYE" ~ "TURKEY",
+    Country == "VENEZUELA, RB" ~ "VENEZUELA",
+    Country == "VIET NAM" ~ "VIETNAM",
+    Country == "YEMEN, REP." ~ "YEMEN",
+    Country == "UNITED STATES" ~ "USA",
+    Country == "MACAO SAR, CHINA" ~ "MACAO", # Assuming direct equivalence
+    Country == "ST. KITTS AND NEVIS" ~ "SAINT KITTS & NEVIS",
+    Country == "ST. LUCIA" ~ "SAINT LUCIA",
+    Country == "ST. VINCENT AND THE GRENADINES" ~ "SAINT VINCENT & THE GRENADINES",
+    Country == "GAMBIA, THE" ~ "GAMBIA",
+    Country == "COMOROS" ~ "COMOROS ISLANDS",
+    Country == "CENTRAL AFRICAN REPUBLIC" ~ "CENTRAL AFRICAN REP.",
+    Country == "VIRGIN ISLANDS (USA)" ~ "VIRGIN ISLANDS",
+    TRUE ~ Country)) 
+
+```
+
+So now before we can merge I should try to bring in the percent changes
+
+```{r}
+#| output: false
+dataframe <- all_yrs_gay_wide
+
+for(year in 2012:2018) {
+  # Generate the names of the columns for the current year and the next year
+  current_year_cols <- grep(paste0("_", year, "$"), names(dataframe), value = TRUE)
+  next_year_cols <- sub(year, year + 1, current_year_cols)
+  
+  # For each column corresponding to the current year
+  for(i in 1:length(current_year_cols)) {
+    current_col <- current_year_cols[i]
+    next_col <- next_year_cols[i]
+    
+    # Check if next_col exists in the dataframe
+    if(next_col %in% names(dataframe)) {
+      # Adjusting the naming convention as per the new requirement
+      change_col_name <- sub("_\\d+$", paste0("__pt.", year + 1), current_col)
+      
+      # Calculate the additive change and add it as a new column
+      dataframe[[change_col_name]] = dataframe[[next_col]] - dataframe[[current_col]]
+    }
+  }
+}
+
+dim(dataframe)
+
+
+#now select only the vars representing change 
+gay_changes_wide <- dataframe %>% 
+  select(which(grepl("__", names(dataframe))) | "Country")
+
+dim(gay_changes_wide)
+
+write.csv(gay_changes_wide, "/Users/zachkoung/Library/Mobile Documents/com~apple~CloudDocs/PENN SPRING 24/GLOBAL CONFLICT/Gay Travel /gay_changes_wide.csv", row.names = FALSE)
+```
+
+Now pivot longer again
+
+```{r}
+#| output: false
+gay_changes_long <- gay_changes_wide %>%
+  gather(key = "Year_Variable", value = "Value", -Country) %>%
+  mutate(Year = gsub(".*pt\\.(\\d+)", "\\1", Year_Variable),
+         Variable = gsub("(.*)__pt\\..*", "\\1", Year_Variable),
+         Variable = gsub("_", " ", Variable)) %>%
+  select(-Year_Variable) %>%
+  spread(key = Variable, value = Value)
+
+dim(gay_changes_long)
+```
+
+Now lets set up the tourism data so its % change
+
+```{r}
+#| output: false
+yrs_to_drop_tour <- as.character(2012:2019)
+
+tour_dat_pct <- tour_dat_new_country_names %>%
+  mutate(`2013.pct` = (`2013` - `2012`) / `2012` * 100,
+         `2014.pct` = (`2014` - `2013`) / `2013` * 100,
+         `2015.pct` = (`2015` - `2014`) / `2014` * 100,
+         `2016.pct` = (`2016` - `2015`) / `2015` * 100,
+         `2017.pct` = (`2017` - `2016`) / `2016` * 100,
+         `2018.pct` = (`2018` - `2017`) / `2017` * 100,
+         `2019.pct` = (`2019` - `2018`) / `2018` * 100) %>% 
+  select(-all_of(yrs_to_drop_tour)) %>% 
+  select(-NA_count)
+```
+
+Now lets put it so its long by country year
+
+```{r}
+tour_dat_pct_long <- tour_dat_pct %>%
+  pivot_longer(
+    cols = -Country, 
+    names_to = "Year",
+    values_to = "tour_pct",
+    names_pattern = "(\\d{4}).*")
+```
+
+Finally, merge the df so it becomes COUNTRY, VAR_2012, VAR_2013... 2012 (tourism etc)
+
+```{r}
+#| output: false
+dat_all <- merge(gay_changes_long, tour_dat_pct_long, by=c("Country", "Year"))
+
+#check for duplicates 
+duplicates <- dat_all[duplicated(dat_all[c("Country", "Year")]) | duplicated(dat_all[c("Country", "Year")], fromLast = TRUE), ]
+print(duplicates)
+```
+
+Now I need to drop rows where either we dont have the tour data or the entire row of lgbt vars is NA
+
+```{r}
+#| output: false
+count(dat_all[is.na(dat_all$tour_pct), ]) ##Only 62 instances i feel ok about removing
+#print(dat_all[is.na(dat_all$tour_pct), ]) Used to see 
+```
+
+```{r}
+#| output: false
+dat_all <- dat_all%>% 
+  filter(!is.na(tour_pct))
+```
+
+Now lets look at NA's for the entire LGBT row
+
+```{r}
+#| output: false
+#| warning: false 
+
+num_rows_all_NA <- dat_all %>%
+  select(-Country, -Year, - tour_pct) %>%  # Exclude non-LGBT variables if necessary
+  apply(1, function(x) all(is.na(x))) %>%
+  sum()  # Count the number of TRUEs, which indicate rows with all NAs
+
+# Print the total number of rows with all NA for LGBT variables
+print(paste("Total number of rows with all LGBT variables as NA:", num_rows_all_NA))
+
+## 202 not ideal but still ok
+
+dat_all_final <- dat_all %>%
+  slice(-num_rows_all_NA)
+```
+
+------------------------------------------------------------------------
+
+### Task 3:
+
+*Briefly discuss the specific variables you will use to test your hypothesis and the dataset they are drawn from. Be sure to mention the source of the data (the organization or individuals that produced it), the unit of analysis, and the sample. Create a `ggplot` to visualize the relationship between the variables being used to test your hypothesis. The best method of visualizing this relationship will depend on the scale of your variables. Good methods to consider are scatter plots (for continuous variables), grouped bar charts (for ordinal or binary variables), and line graphs (for continuous variables with time-series). (25%)*
+
+------------------------------------------------------------------------
+
+**Discussion of key variables**
+
+[Dependent Variable]{.underline}
+
+-   Tourism volume percent change from the previous year (**tour_pct**):
+
+    -   This represents tourism data collected from the world bank and the world tourism association. You can see in the above code segments how I cleaned, pivoteded, mutated, merged, and more to turn the data from country, year 1, year 2, year n, in which the values were the number of tourist arrivals in that year. Note I only use starting 2012 because of limits of the independent variable, and I don't use anything after FY 2019 because of covid-related shocks. Final unit of analysis is by country and year. Sample is not just countries but also territories (ex: US Virgin Islands), regions (ex: MENA), and other buckets such as income buckets which I discarded.
+
+[Independent Variables]{.underline}
+
+-   **Total**
+
+    -   This represents the total score a country gets in a given year from the Gay Spartacus Travel Index. Each country was scored starting 2012, on a variety of different features (see other variables). Scores centered around 0 and countries can either earn points or loose points. The GSTI cites a variety of different sources including IGLA, Rainbow Europe, the UN, and more.
+
+    -   In order to get this into a workable format I had to get PDFs to EXCLs to CSVs and then spend a lot of time cleaning the data, pivoting, merging re-poviting, etc. See above code segements for more specifics, but I got the unit of analysis down to country year, such that the df looks like: Country, Year, Total, Specific LGBT variable 1, Specific LGBT variable 2, Specific LGBT variable ...n. Sample ranges specifically from year to year but generally includes UN-recognized countries.
+
+*I only will cover a few examples because the process is the pretty similar for all of the LGBT variables since it comes from the same org and report.*
+
+-   **Adoption allowed**
+
+    -   This is a pretty clear measure where its very simple to see whether or not adoption is allowed, and for the most part this functions as a binary variable.
+
+-   **Antidiscrimination**
+
+    -   "With regard to anti-discrimination laws up to 3 points can be awarded, making a distinction, for example, whether the principle of non-discrimination on grounds of sexual orientation in the constitution or only in a law for a specific area is shown." (*direct wording from the GSTI).*
+
+```{r}
+ggplot(dat_all_final, 
+       aes(x = as.factor(Total), 
+           y = tour_pct)) + 
+  geom_boxplot() + 
+  labs(x = "Total change in LGBTQ+ scores", 
+       y = "Change in Tourism Arrivals by Volume", 
+       title = "Does changes in LGBTQ friendliness impact tourism volume? No.")
+```
+
+```{r}
+ggplot(dat_all_final, 
+       aes(x = Total, 
+           y = tour_pct)) + 
+  geom_point() + 
+  geom_smooth(method=lm) + 
+  labs(x = "Total change in LGBTQ+ scores", 
+       y = "Change in Tourism Arrivals by Volume", 
+       title = "Does changes in LGBTQ friendliness impact tourism volume? No.")
+```
+
+------------------------------------------------------------------------
+
+### Task 4:
+
+*Specify the main regression model you will use to test your hypothesis. This regression model should provide a preliminary test for or against the validity of your hypothesis. Use markdown to render the equation neatly to the html file. (10%)*
+
+------------------------------------------------------------------------
+
+After some discussion with you, I have decided that the simplest regression model is best. Because I am looking at percent change, there is an effect similar to FE that already controls for country size.
+
+$$
+Percent\ Change\ Tourism\ Volume_i = \alpha + \beta_1( Change\ in\ LGBTQ\ Friendliness\ Variables)_{i1} + \epsilon_i
+$$
+
+```{r}
+#| output: false
+#| include: false 
+reg1 <- lm(data = dat_all_final, 
+           tour_pct ~ `Total` + 
+             `Adoption allowed` + 
+             `Anitdiscrimination` + 
+             `Anti-gay laws` + 
+             `Death sentences` + 
+             `Equal Age of Consent` + 
+             `HIV-travel restrictions` + 
+             `Homosexuality illegal` + 
+             `LGBT-Marketing` + 
+             `Locals hostile` + 
+             `Marriage / Partnership` + 
+             `Murders` + 
+             `Pride banned` + 
+             `Prosecution` + 
+             `Religious influence`) #not using transgender bc its missing for so much 
+summary(reg1)
+
+
+reg2 <- lm(data = dat_all_final, 
+           tour_pct ~ 
+             `Anitdiscrimination` + 
+             `Anti-gay laws` + 
+             `HIV-travel restrictions` + 
+             `Homosexuality illegal` + 
+             `LGBT-Marketing` + 
+             `Locals hostile` + 
+             `Murders` + 
+             `Pride banned` + 
+             `Prosecution` + 
+             `Religious influence`) #not using transgender bc its missing for so much 
+summary(reg2)
+
+
+reg3 <- lm(data = dat_all_final, 
+           tour_pct ~ 
+            `Pride banned` )#not using transgender bc its missing for so much 
+summary(reg3)
+```
+
+**A note on AI**\
+*I used GPT4 many times throughout this assignment. Noteably in helping me code in time saving measures (instead of calculating the percent change by hand for 12+ variables and over 9 times each) I got it to give me the code to do it automatically. Moreover, especially with the chaos that is pivoting I used it to help me ID rows using str type commands. I also used GPT4 to help with editing, debugging, trying to use python instead (did not go with in the end), as well as some editing/rephrasing and reworking of my explanations and responses.*
